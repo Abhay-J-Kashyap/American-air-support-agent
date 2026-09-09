@@ -77,4 +77,35 @@ retrieval over 30-word tweets. Embeddings are stored float16 (~12MB for 15k
 messages) rather than float32. `pip install -e ".[torch]"` restores the old
 backend if the swap ever needs auditing.
 
-<!-- 13-15: add as they come up. Target 10-15 total. -->
+**13. Free-tier model catalogs are a moving target -- verify before every long run, not just at project start.**
+Three weeks (in project time) after picking `llama-3.1-8b-instant` and
+`llama-3.3-70b-versatile` on Groq, both were decommissioned (2026-08-16) and
+`check-providers` returned 404 on every one of them. Groq's free flagship
+consolidated around `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, and a preview
+`qwen/qwen3.6-27b`. This is the entire reason `check-providers` exists as a
+standing target rather than a one-time setup step -- a report that claims
+reproducibility from a free-tier stack has to treat provider catalogs as
+unstable, not fixed at design time.
+
+**14. Cerebras disabled for this account -- a live 402 outranks aggregator blogs.**
+`gpt-oss-120b`, the only model in Cerebras's public production catalog,
+returns 402 Payment Required on this account. Several third-party trackers
+describe a perpetual, no-card 1M-tokens/day free tier; Cerebras's own current
+pricing structure describes a one-time $5 trial credit plus a paid Developer
+tier, which matches the observed 402 far better. `providers.cerebras.enabled`
+is set to `false` rather than left half-working. Re-enable only after
+confirming billing status directly in the Cerebras console -- never take an
+aggregator's "free tier" claim over what the provider's own API just said.
+
+**15. judge_a lost provider independence from the drafter; judge_b is what preserves the experiment.**
+The original design put judges on different providers AND different model
+families from the drafter (#8). With Cerebras disabled (#14), Groq is the
+only remaining free provider with enough throughput for our volume, so both
+the drafter (`qwen/qwen3.6-27b`) and judge_a (`openai/gpt-oss-120b`) now sit
+on Groq -- family-independent, not provider-independent. judge_b (Mistral
+Small) is the one judge with full independence and is what the
+self-preference analysis leans on for a clean reading. Disclosed in the
+report as a possible shared-infrastructure confound for judge_a (e.g.
+Groq's TruePoint Numerics precision reduction affecting both calls
+identically). CI (`test_at_least_one_judge_is_fully_independent_of_the_drafter`)
+guards that this last clean signal can't be silently lost to a future config edit.

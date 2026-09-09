@@ -26,20 +26,40 @@ def test_config_loads_and_names_providers(cfg):
     assert cfg.provider("cerebras").max_context_tokens == 8192
 
 
-def test_judges_are_isolated_from_the_drafter(cfg):
-    """Judge independence is load-bearing for the bias analysis.
+def _family(ref) -> str:
+    return ref.model.split("-")[0]
 
-    If a judge shared a provider AND a family with the drafter, the
-    self-preference measurement would be meaningless. Assert it in CI so a
-    convenient config edit cannot quietly destroy the experiment.
+
+def test_every_judge_differs_in_model_family_from_the_drafter(cfg):
+    """Minimum bar, non-negotiable for every judge.
+
+    If a judge shared a model family with the drafter, the self-preference
+    measurement would be meaningless regardless of which provider hosts it.
     """
     drafter = cfg.role("drafter").primary
     for judge in ("judge_a", "judge_b"):
         ref = cfg.role(judge).primary
-        assert ref.provider != drafter.provider, f"{judge} shares a provider with drafter"
-        assert ref.model.split("-")[0] != drafter.model.split("-")[0], (
-            f"{judge} shares a model family with drafter"
-        )
+        assert _family(ref) != _family(drafter), f"{judge} shares a model family with drafter"
+
+
+def test_at_least_one_judge_is_fully_independent_of_the_drafter(cfg):
+    """At least one judge must differ in BOTH provider and family.
+
+    Originally both judges met this bar. Cerebras is disabled for this
+    account (DECISIONS.md #14), which forced judge_a onto Groq alongside
+    the drafter -- family-independent but not provider-independent. judge_b
+    (Mistral) is what still gives a clean, fully independent reading; this
+    test guards that at least one such judge always exists, so a future
+    config edit can't silently lose the last clean signal.
+    """
+    drafter = cfg.role("drafter").primary
+    fully_independent = [
+        judge
+        for judge in ("judge_a", "judge_b")
+        if cfg.role(judge).primary.provider != drafter.provider
+        and _family(cfg.role(judge).primary) != _family(drafter)
+    ]
+    assert fully_independent, "no judge is fully independent (provider + family) of the drafter"
 
 
 def test_openrouter_is_never_a_primary(cfg):
@@ -87,4 +107,7 @@ def test_missing_keys_surface_every_provider_in_the_error(cfg):
     with pytest.raises(LLMError) as exc:
         client.complete("classifier", [{"role": "user", "content": "hi"}])
     msg = str(exc.value)
-    assert "GROQ_API_KEY" in msg and "CEREBRAS_API_KEY" in msg
+    # classifier's chain is groq (primary) -> openrouter (fallback).
+    # Cerebras is disabled account-wide (DECISIONS.md #14) and skipped
+    # silently rather than surfaced as a missing-key error.
+    assert "GROQ_API_KEY" in msg and "OPENROUTER_API_KEY" in msg

@@ -1,13 +1,21 @@
-.PHONY: help setup lint fmt typecheck test check-providers data intents index golden eval eval-live freeze-cache report clean
+.PHONY: help setup setup-dev lock lint fmt typecheck test check-providers data intents index golden eval eval-live freeze-cache report clean
 
 PY := python
 CONFIG ?= config/config.yaml
 
-help:
-	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+help:  ## List available targets
+	@$(PY) scripts/help.py
 
-setup:  ## Install the package and dev dependencies
+setup:  ## Install from the lock file (reproducible)
+	@$(PY) scripts/require_lock.py
+	$(PY) -m pip install -r requirements.lock
+	$(PY) -m pip install -e . --no-deps
+
+setup-dev:  ## Resolve fresh from pyproject (use when adding/upgrading deps)
 	$(PY) -m pip install -e ".[dev]"
+
+lock:  ## Regenerate the lock file after changing dependencies
+	$(PY) -m pip freeze --exclude-editable > requirements.lock
 
 lint:  ## ruff check
 	ruff check src tests
@@ -47,7 +55,7 @@ report:  ## Render metrics, tables and figures into report/
 	$(PY) -m aa_agent.cli report --config $(CONFIG)
 
 freeze-cache:  ## Compress the response cache for committing
-	gzip -9 -kf artifacts/llm_cache.jsonl && ls -lh artifacts/llm_cache.jsonl.gz
+	$(PY) scripts/freeze_cache.py
 
-clean:
-	rm -rf .pytest_cache .ruff_cache .mypy_cache **/__pycache__
+clean:  ## Remove tool caches (pytest/ruff/mypy/__pycache__)
+	@$(PY) scripts/clean.py

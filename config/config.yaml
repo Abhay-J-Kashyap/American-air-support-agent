@@ -5,7 +5,9 @@ project:
 
 # Per-provider transport + published free-tier limits.
 # These are CEILINGS we self-impose; the real limits live in response headers.
-# `aa check-providers` prints what the API actually reports.
+# `make check-providers` prints what the API actually reports. Free-tier
+# model catalogs move fast -- see DECISIONS.md #13-15 for what happened the
+# first time we ran this against live keys.
 providers:
   groq:
     base_url: https://api.groq.com/openai/v1
@@ -15,20 +17,27 @@ providers:
     max_context_tokens: 128000
     enabled: true
 
+  # Disabled for this account: gpt-oss-120b (the only model in Cerebras's
+  # public production catalog) returns 402 Payment Required despite
+  # third-party trackers advertising a perpetual no-card free tier.
+  # Cerebras's own current pricing structure is a one-time $5 trial credit
+  # plus a paid Developer tier -- that matches the observed 402 better than
+  # the aggregator claims did. See DECISIONS.md #14. Re-enable only after
+  # confirming billing status directly at cloud.cerebras.ai -- never take a
+  # blog's "free tier" claim over a live 402 from the provider itself.
   cerebras:
     base_url: https://api.cerebras.ai/v1
     api_key_env: CEREBRAS_API_KEY
     rpm: 30
     tpm: 30000
-    # Free tier caps context at 8K. Hard-fail rather than silently truncate:
-    # a truncated judge prompt that still returns a score corrupts metrics
-    # without erroring. See DECISIONS.md #6.
     max_context_tokens: 8192
-    enabled: true
+    enabled: false
 
   mistral:
     base_url: https://api.mistral.ai/v1
     api_key_env: MISTRAL_API_KEY
+    # Free "Experiment" tier is documented at ~1 request/second; 60 rpm is
+    # that same ceiling expressed per-minute, not a separate guess.
     rpm: 60
     tpm: 50000
     max_context_tokens: 32000
@@ -36,6 +45,10 @@ providers:
 
   # Fallback only. Free variants are 20 RPM / 50 requests per DAY on an
   # unfunded account, and failed calls still burn quota. Never primary.
+  # Free-variant availability also flaps with upstream capacity -- a 404
+  # here doesn't always mean the slug is wrong, just that it's momentarily
+  # unavailable. Check https://openrouter.ai/models?max_price=0 for the
+  # live list before assuming a slug is stale.
   openrouter:
     base_url: https://openrouter.ai/api/v1
     api_key_env: OPENROUTER_API_KEY
@@ -50,25 +63,30 @@ roles:
   classifier:
     temperature: 0.0
     max_tokens: 200
-    primary: {provider: groq, model: llama-3.1-8b-instant}
+    primary: {provider: groq, model: "openai/gpt-oss-20b"}
     fallbacks:
-      - {provider: cerebras, model: llama3.1-8b}
-      - {provider: openrouter, model: "meta-llama/llama-3.3-70b-instruct:free"}
+      - {provider: openrouter, model: "openai/gpt-oss-20b:free"}
 
+  # qwen3.6-27b is flagged "preview" by Groq (evaluation, not production).
+  # Accepted here because it's what keeps the drafter's model family
+  # distinct from judge_a, which also lives on Groq post-Cerebras. Flag
+  # this as a limitation in the report if judge_a's scores look odd.
   drafter:
     temperature: 0.3
     max_tokens: 320
-    primary: {provider: groq, model: llama-3.3-70b-versatile}
+    primary: {provider: groq, model: "qwen/qwen3.6-27b"}
     fallbacks:
-      - {provider: openrouter, model: "deepseek/deepseek-chat:free"}
+      - {provider: openrouter, model: "deepseek/deepseek-chat-v3.1:free"}
 
-  # Judges deliberately sit on different providers AND different model
-  # families from the drafter. That separation is what makes the
-  # self-preference bias analysis meaningful. See DECISIONS.md #8.
+  # judge_b (Mistral) is the ONE judge with full independence -- different
+  # provider AND different model family from the drafter. judge_a shares a
+  # provider with the drafter now that Cerebras is disabled; it still
+  # differs in model family (openai/gpt-oss vs qwen). See DECISIONS.md #15
+  # for why, and report it as a possible shared-infrastructure confound.
   judge_a:
     temperature: 0.0
     max_tokens: 600
-    primary: {provider: cerebras, model: gpt-oss-120b}
+    primary: {provider: groq, model: "openai/gpt-oss-120b"}
     fallbacks:
       - {provider: openrouter, model: "openai/gpt-oss-120b:free"}
 

@@ -27,6 +27,30 @@ RATE_HEADERS = (
 )
 
 
+def _error_detail(r: httpx.Response, limit: int = 160) -> str:
+    """Pull the actual message + error type out of the response body.
+
+    A blind `r.text[:60]` slice cuts most OpenAI-compatible error bodies off
+    right before the `"type"` field, which is usually the one piece of text
+    that tells you WHY (rate_limit_exceeded vs invalid_api_key vs
+    model_not_found are very different fixes) rather than just THAT
+    something failed.
+    """
+    try:
+        body = r.json()
+    except ValueError:
+        return f"{r.status_code} {r.text[:limit]}"
+    err = body.get("error") if isinstance(body, dict) else None
+    if isinstance(err, dict):
+        msg, typ = err.get("message") or str(err), err.get("type")
+    elif isinstance(body, dict):
+        msg, typ = body.get("message") or str(body), body.get("type")
+    else:
+        msg, typ = str(body), None
+    text = f"{r.status_code} {msg}" + (f" [{typ}]" if typ else "")
+    return text[:limit]
+
+
 def _cfg(path: Path | None) -> Config:
     return load_config(path)
 
@@ -96,8 +120,7 @@ def check_providers(
                 if r.status_code == 200:
                     table.add_row(label, str(ref), "[green]ok[/green]", str(ms), limits)
                 else:
-                    detail = f"{r.status_code} {r.text[:60]}"
-                    table.add_row(label, str(ref), "[red]fail[/red]", str(ms), detail)
+                    table.add_row(label, str(ref), "[red]fail[/red]", str(ms), _error_detail(r))
                     if i == 0:
                         failures += 1
 
