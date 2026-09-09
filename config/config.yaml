@@ -1,0 +1,100 @@
+project:
+  brand: AmericanAir
+  seed: 20260909
+  cache_path: artifacts/llm_cache.jsonl
+
+# Per-provider transport + published free-tier limits.
+# These are CEILINGS we self-impose; the real limits live in response headers.
+# `aa check-providers` prints what the API actually reports.
+providers:
+  groq:
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    rpm: 30
+    tpm: 6000
+    max_context_tokens: 128000
+    enabled: true
+
+  cerebras:
+    base_url: https://api.cerebras.ai/v1
+    api_key_env: CEREBRAS_API_KEY
+    rpm: 30
+    tpm: 30000
+    # Free tier caps context at 8K. Hard-fail rather than silently truncate:
+    # a truncated judge prompt that still returns a score corrupts metrics
+    # without erroring. See DECISIONS.md #6.
+    max_context_tokens: 8192
+    enabled: true
+
+  mistral:
+    base_url: https://api.mistral.ai/v1
+    api_key_env: MISTRAL_API_KEY
+    rpm: 60
+    tpm: 50000
+    max_context_tokens: 32000
+    enabled: true
+
+  # Fallback only. Free variants are 20 RPM / 50 requests per DAY on an
+  # unfunded account, and failed calls still burn quota. Never primary.
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    rpm: 20
+    tpm: 100000
+    rpd: 50
+    max_context_tokens: 32000
+    enabled: true
+
+# Roles, not models. Swapping a provider is a config edit, never a refactor.
+roles:
+  classifier:
+    temperature: 0.0
+    max_tokens: 200
+    primary: {provider: groq, model: llama-3.1-8b-instant}
+    fallbacks:
+      - {provider: cerebras, model: llama3.1-8b}
+      - {provider: openrouter, model: "meta-llama/llama-3.3-70b-instruct:free"}
+
+  drafter:
+    temperature: 0.3
+    max_tokens: 320
+    primary: {provider: groq, model: llama-3.3-70b-versatile}
+    fallbacks:
+      - {provider: openrouter, model: "deepseek/deepseek-chat:free"}
+
+  # Judges deliberately sit on different providers AND different model
+  # families from the drafter. That separation is what makes the
+  # self-preference bias analysis meaningful. See DECISIONS.md #8.
+  judge_a:
+    temperature: 0.0
+    max_tokens: 600
+    primary: {provider: cerebras, model: gpt-oss-120b}
+    fallbacks:
+      - {provider: openrouter, model: "openai/gpt-oss-120b:free"}
+
+  judge_b:
+    temperature: 0.0
+    max_tokens: 600
+    primary: {provider: mistral, model: mistral-small-latest}
+    fallbacks: []
+
+embedding:
+  # Served via fastembed/ONNX (~50MB) rather than torch (~2.5GB).
+  backend: fastembed
+  model: BAAI/bge-small-en-v1.5
+  dim: 384
+  dtype: float16
+
+data:
+  raw_csv: data/twcs.csv
+  brand_parquet: artifacts/american_air.parquet
+  # Time-based split: index on the earlier window, evaluate on the later one.
+  # A random split leaks near-duplicate storm-event tweets across the
+  # boundary and inflates retrieval scores. See DECISIONS.md #4.
+  split_quantile: 0.7
+  near_duplicate_cosine: 0.95
+
+golden:
+  size: 200
+  stratum_a: 100   # uniform random -> the only stratum quotable as a population estimate
+  stratum_b: 100   # stratified + adversarial -> coverage, NOT a population estimate

@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.env
+
+# The raw 500MB CSV is never committed. `make data` stream-filters it and
+# deletes it; the ~8MB brand slice is what lives in artifacts/.
+data/twcs.csv
+data/*.zip
+
+# Working cache is uncompressed; the gzipped freeze is what gets committed.
+artifacts/llm_cache.jsonl
+!artifacts/llm_cache.jsonl.gz
