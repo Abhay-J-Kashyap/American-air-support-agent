@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 
 from aa_agent.config import Config, load_config
+from aa_agent.ingest import run_ingest
 from aa_agent.llm.client import LLMClient
 
 app = typer.Typer(add_completion=False, help="AmericanAir support agent pipeline")
@@ -129,6 +130,57 @@ def check_providers(
         console.print(f"[red]{failures} primary model(s) unreachable.[/red]")
         raise typer.Exit(code=1)
     console.print("[green]All primary models reachable.[/green]")
+
+
+@app.command("ingest")
+def ingest(
+    config: Path = typer.Option(None, "--config", "-c"),
+    keep_raw: bool = typer.Option(
+        False, "--keep-raw", help="Don't delete the raw CSV after filtering."
+    ),
+) -> None:
+    """Filter the raw multi-brand CSV down to config.project.brand's slice.
+
+    Two passes over the raw file (see aa_agent.ingest module docstring for
+    why it can't be one), then thread reconstruction, multi-part reply
+    rejoining, PII scrubbing, and the time-based train/eval split -- all
+    written to one parquet file.
+    """
+    cfg = _cfg(config)
+    if not cfg.data.raw_csv.exists():
+        console.print(f"[red]{cfg.data.raw_csv} not found.[/red]")
+        console.print(
+            "Download twcs.csv from "
+            "kaggle.com/datasets/thoughtvector/customer-support-on-twitter "
+            f"and place it at {cfg.data.raw_csv}."
+        )
+        raise typer.Exit(code=1)
+
+    with console.status(f"Filtering to {cfg.project.brand}..."):
+        stats = run_ingest(
+            raw_csv=cfg.data.raw_csv,
+            out_parquet=cfg.data.brand_parquet,
+            brand_author_id=cfg.project.brand,
+            split_quantile=cfg.data.split_quantile,
+        )
+
+    table = Table("metric", "value")
+    table.add_row("raw rows scanned", f"{stats.raw_rows:,}")
+    table.add_row("brand-connected ids", f"{stats.brand_connected_ids:,}")
+    table.add_row("rows kept", f"{stats.kept_rows:,}")
+    table.add_row("duplicate ids dropped", f"{stats.duplicate_ids_dropped:,}")
+    table.add_row("undated rows dropped", f"{stats.undated_rows_dropped:,}")
+    table.add_row("multi-part replies merged", str(stats.multipart_merges))
+    table.add_row("training window rows", f"{stats.training_rows:,}")
+    table.add_row("eval window rows", f"{stats.eval_rows:,}")
+    console.print(table)
+    console.print(f"[green]wrote {cfg.data.brand_parquet}[/green]")
+
+    if keep_raw:
+        console.print(f"[dim]--keep-raw set, leaving {cfg.data.raw_csv} in place.[/dim]")
+    else:
+        cfg.data.raw_csv.unlink()
+        console.print(f"[dim]deleted {cfg.data.raw_csv} (pass --keep-raw to retain it).[/dim]")
 
 
 @app.command("cache-stats")

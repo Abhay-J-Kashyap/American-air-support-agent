@@ -109,3 +109,80 @@ report as a possible shared-infrastructure confound for judge_a (e.g.
 Groq's TruePoint Numerics precision reduction affecting both calls
 identically). CI (`test_at_least_one_judge_is_fully_independent_of_the_drafter`)
 guards that this last clean signal can't be silently lost to a future config edit.
+
+**16. Ingestion is two passes; thread connectivity can't be known in one streaming pass.**
+Whether a customer's opening tweet belongs to the brand slice depends on
+where its thread eventually leads, which isn't knowable until the whole
+reply graph exists. Pass 1 builds a lightweight tweet_id -> parent-id index
+over the full file (a few numeric columns, not text -- tens of MB, not
+hundreds). Pass 2 re-reads the file and keeps only rows in the
+brand-connected set found in pass 1. This only applies to `make data`, which
+isn't on the 15-minute reproduction path (`make eval` runs from cache) --
+it's fine for this step to take longer.
+
+**17. Multi-part reply merge reparents onto the FIRST part's parent, keeps the SECOND part's id.**
+When a brand reply is split "...(1/2)" then a same-author follow-up, the
+merged row has to keep the id anything downstream actually points at (the
+last part posted), while its own parent pointer skips over the dropped
+first part to whatever the first part originally replied to. Getting this
+backwards silently breaks the thread graph rather than erroring, so it's
+covered by `test_multipart_reply_merges_and_skips_the_dropped_parent` with
+an explicit check on `in_response_to_tweet_id`, not just on the merged text.
+
+**18. A confirmation-code regex without a digit requirement redacts its own label.**
+First version of the booking-reference regex matched a trigger word,
+optionally "number", optionally a linking word, then `[A-Z0-9]{5,8}` for the
+code. Under `re.IGNORECASE`, the literal word "number" is itself six
+letters -- it satisfies that character class as well as a real code does,
+so `"confirmation number is AB12CD"` redacted "number" and left the actual
+code untouched. Fixed with a lookahead requiring at least one digit in the
+captured span. Caught by `test_confirmation_code_redacted`, which is why it
+asserts on the literal code string disappearing rather than just checking
+that `[REF]` appears somewhere in the output -- a weaker assertion would
+have passed against the bug.
+
+**19. Three ingestion bugs that only surface on real data, found by adversarial probing rather than by the test suite.**
+The fixture-based tests all passed while these were live, because clean
+fixtures don't contain the pathologies a 3M-row scrape does. Found by
+deliberately constructing the messy cases:
+* **Cyclic parent references** (`a -> b -> a`, or a self-reply) sent
+  `reconstruct_threads` into an infinite loop. `make data` would hang with
+  no output and no error. Fixed with a `seen` guard; cycles collapse to
+  `min(cycle)` so thread_ids are independent of row order.
+* **Duplicate tweet_ids** made `set_index("tweet_id")` non-unique, so
+  `.loc[parent_id]` returned a DataFrame instead of a Series and the
+  multipart merge died with pandas' "truth value of a Series is ambiguous"
+  -- an opaque error far from its cause. Now deduplicated in pass 2
+  (`keep="first"`), with an explicit precondition check in the merge that
+  names the real problem.
+* **Unparseable timestamps** became `NaT`, and since `NaT <= cutoff` is
+  False, those rows landed in the EVAL window unannounced -- silently
+  polluting the held-out set, the worst outcome available in this pipeline.
+  Now dropped in pass 2 and counted.
+Both drop counts are surfaced in the `make data` output rather than being
+silently swallowed: if the real file turns out to have thousands of either,
+that is a finding about the dataset worth reporting, not a detail to hide.
+
+**20. Timestamps parsed with an explicit format; ISO-8601 test fixtures were unrepresentative.**
+twcs.csv uses Twitter's native format ("Tue Oct 31 22:10:47 +0000 2017"),
+not ISO-8601. Every fixture in the test suite used ISO-8601 and passed
+anyway, because `errors="coerce"` quietly fell back to dateutil -- so the
+tests were green while parsing ~88k values individually and emitting a
+UserWarning on every real run. Now parsed with an explicit format (3x
+faster, no warning), with a per-row fallback so an oddly-formatted row is
+recovered rather than dropped by the undated filter. Two tests now pin the
+real format. Same lesson as #19: fixtures written from assumption rather
+than from data hide the bugs they were meant to catch.
+
+**21. Multi-part reply merging retained but effectively dead for this brand -- deliberately not "fixed".**
+Only 10 of 36,764 AmericanAir replies (0.03%, 4 conversations) carry an
+`(N/M)` marker. Investigated whether to loosen the pattern to bare `N/M`
+and the answer is an emphatic no: 129 replies contain bare `\d+/\d+`, and
+inspection shows they are all false positives -- "we're here 24/7" and
+dates like "10/23". A looser regex would have merged unrelated tweets and
+corrupted the thread graph. The strict parenthesised pattern is correct
+*because* it is strict. The merge code stays (it costs nothing, is tested,
+and would matter for a brand like Delta that does split replies), but for
+AmericanAir the honest expected value is ~0 merges and that is reported as
+such rather than tuned until the number looks impressive. 140->280 char
+expansion in late 2017, mid-dataset, is the likely reason splitting is rare.

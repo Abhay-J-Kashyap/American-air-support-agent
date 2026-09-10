@@ -25,6 +25,7 @@ dependencies = [
 dev = [
     "pytest>=8.2",
     "pytest-cov>=5.0",
+    "pytest-timeout>=2.3",
     "ruff>=0.5",
     "mypy>=1.10",
     "types-PyYAML",
@@ -53,8 +54,9 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 # Typer declares CLI options as argument defaults by design.
 "src/aa_agent/cli.py" = ["B008"]
-# Tests reach into private limiter state deliberately.
-"tests/*" = ["SLF001"]
+# Tests reach into private limiter state deliberately, and the raw-CSV
+# fixture in test_ingest.py can't be line-wrapped without corrupting it.
+"tests/*" = ["SLF001", "E501"]
 
 [tool.mypy]
 python_version = "3.10"
