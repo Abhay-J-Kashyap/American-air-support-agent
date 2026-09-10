@@ -32,7 +32,7 @@ make data                 # stream-filter the raw CSV to the brand slice   [DONE
 make intents              # cluster and propose an intent taxonomy         [DONE]
 make taxonomy             # validate the curated taxonomy                  [DONE]
 make index                # build the retrieval index (training window)    [TODO]
-make golden               # launch the labelling CLI                       [TODO]
+make golden               # hand-label the 200-example golden set          [DONE]
 make eval-live            # regenerate predictions and judgements          [TODO]
 make report               # render metrics, tables, figures                [TODO]
 ```
@@ -41,10 +41,10 @@ make report               # render metrics, tables, figures                [TODO
 
 ### Build status
 
-Implemented: `ingest`, `discover-intents`, `taxonomy-show`, `check-providers`,
-`cache-stats`, `config-show`.
+Implemented: `ingest`, `discover-intents`, `taxonomy-show`, `label`,
+`check-providers`, `cache-stats`, `config-show`.
 
-Not yet implemented: `build-index`, `label`, `evaluate`, `report`. The
+Not yet implemented: `build-index`, `evaluate`, `report`. The
 Makefile targets for these exist and will fail with "No such command" until
 the corresponding stage is written -- which is also why the `reproduce` job
 in CI is currently red. That is expected, not a regression.

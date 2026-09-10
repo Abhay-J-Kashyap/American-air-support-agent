@@ -418,3 +418,45 @@ protect. Fixed by routing the path through config, adding a
 rather than orphaned), and correcting the message. Lesson: unit tests
 verify components, not that components are wired to each other. A
 periodic whole-project audit is a distinct activity from running the suite.
+
+**42. `travel_excitement` split back out of `positive_no_action` -- split now, merge later.**
+Merging two labels afterwards is a mechanical find-and-replace; splitting
+one afterwards means re-reading every example already assigned it. So the
+cheap direction is always to label at the finest granularity plausibly
+wanted. `praise_thanks` (~20%, gratitude for service received) and
+`travel_excitement` (~10%, anticipation of an upcoming trip) are both
+auto_ok and both need no resolution, but they are different messages
+warranting different replies. Originally merged; separated before any
+labelling began, when it was still free.
+
+**43. Stratum B is filled round-robin across categories, not quota-by-quota.**
+Filling each category's quota in sequence lets a common category exhaust
+the budget before a rare one is reached -- `accessibility_medical` at ~0.5%
+prevalence would get nothing at all. Round-robin takes one example per
+category per pass, so every category is represented before any is topped
+up. Categories that cannot fill their share leave the remainder to
+`random_topup`, which is recorded explicitly so the composition of stratum
+B is visible rather than assumed.
+
+**44. Sampling patterns are a sampling aid, never a label.**
+The regexes that pull rare intents into stratum B do not assign intents.
+A message matching /refund/ may be venting rather than requesting, and the
+human decides. Keeping these separate matters because using the patterns
+as labels would make the golden set agree with a keyword baseline by
+construction, and any comparison against that baseline would be circular.
+
+**45. Labels are append-only and flushed per example.**
+Two hours of hand-labelling must survive a crash, a closed terminal, or a
+laptop lid. Each label is appended and flushed immediately rather than
+saved in bulk at the end; a torn final line from a killed process is
+skipped on reload. `load_labels` keeps the LAST record per tweet_id, so
+correcting an earlier judgement is just a newer line rather than an edit --
+which also leaves the revision history intact for the report.
+
+**46. `reference_is_good` is captured at labelling time, not inferred later.**
+A large share of AmericanAir's replies are content-free ("DM us"). Without
+recording whether the reference reply was actually any good, cases where
+the agent BEATS the reference are indistinguishable from cases where it
+failed to match it. Asked once per example while the message is already on
+screen -- reconstructing this judgement afterwards would mean re-reading
+all 200.

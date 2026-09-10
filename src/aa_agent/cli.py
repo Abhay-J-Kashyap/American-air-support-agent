@@ -371,6 +371,169 @@ def taxonomy_show(config: Path = typer.Option(None, "--config", "-c")) -> None:
     console.print(f"always_escalate: [red]{', '.join(tax.always_escalate_labels())}[/red]")
 
 
+@app.command("label")
+def label(
+    config: Path = typer.Option(None, "--config", "-c"),
+    sample_path: Path = typer.Option(Path("artifacts/golden/sample.jsonl"), "--sample-file"),
+    labels_path: Path = typer.Option(Path("artifacts/golden/labels.jsonl"), "--labels-file"),
+    resample: bool = typer.Option(False, "--resample", help="Redraw the sample from scratch."),
+) -> None:
+    """Hand-label the golden set. Resumable -- stop and restart any time.
+
+    Label BEFORE the agent exists (DECISIONS.md #1). Labelling afterwards
+    lets your judgements drift toward whatever the system happens to output,
+    which quietly turns the evaluation into a measure of self-agreement.
+    """
+    from aa_agent.golden import (  # noqa: PLC0415
+        append_label,
+        build_golden_sample,
+        compile_golden_set,
+        label_progress,
+        load_examples,
+        load_labels,
+        save_examples,
+    )
+    from aa_agent.taxonomy import load_taxonomy  # noqa: PLC0415
+
+    cfg = _cfg(config)
+    tax = load_taxonomy(cfg.taxonomy_path)
+
+    if resample or not sample_path.exists():
+        if not cfg.data.brand_parquet.exists():
+            console.print(f"[red]{cfg.data.brand_parquet} not found. Run `make data`.[/red]")
+            raise typer.Exit(code=1)
+        df = pd.read_parquet(cfg.data.brand_parquet)
+        try:
+            examples, stats = build_golden_sample(
+                df,
+                brand=cfg.project.brand,
+                n_stratum_a=cfg.golden.stratum_a,
+                n_stratum_b=cfg.golden.stratum_b,
+                seed=cfg.project.seed,
+            )
+        except ValueError as exc:
+            console.print(f"[red]Cannot draw the sample: {exc}[/red]")
+            console.print(
+                "Lower golden.stratum_a / golden.stratum_b in config.yaml, or widen the "
+                "eval window by lowering data.split_quantile."
+            )
+            raise typer.Exit(code=1) from exc
+        save_examples(examples, sample_path)
+        console.print(
+            f"drew [bold]{stats.total}[/bold] examples "
+            f"(A={stats.stratum_a} uniform, B={stats.stratum_b} stratified) -> {sample_path}"
+        )
+        breakdown = Table("stratum B category", "n")
+        for reason, n in sorted(stats.by_reason.items(), key=lambda kv: -kv[1]):
+            if reason != "uniform_random":
+                breakdown.add_row(reason, str(n))
+        console.print(breakdown)
+    else:
+        examples = load_examples(sample_path)
+        console.print(f"loaded [bold]{len(examples)}[/bold] sampled examples from {sample_path}")
+
+    labels = load_labels(labels_path)
+    done, total = label_progress(examples, labels)
+    console.print(f"progress: [bold]{done}/{total}[/bold] labelled\n")
+
+    intents = tax.labels
+    todo = [e for e in examples if e.tweet_id not in labels or not labels[e.tweet_id].is_labelled]
+    if not todo:
+        console.print("[green]All examples labelled.[/green]")
+        _write_golden_csv(compile_golden_set(examples, labels), labels_path)
+        return
+
+    console.print("[dim]Enter the number for each field. 's' skips, 'q' saves and quits.[/dim]\n")
+
+    for n, ex in enumerate(todo, start=1):
+        console.print(
+            f"[bold cyan]── {done + n}/{total} ── stratum {ex.stratum} "
+            f"({ex.sample_reason}) ──[/bold cyan]"
+        )
+        console.print(f"[white]{ex.text}[/white]\n")
+
+        intent = _choose("INTENT", intents)
+        if intent is None:
+            console.print("[yellow]Saved. Re-run to continue.[/yellow]")
+            break
+        if intent == "__skip__":
+            continue
+
+        tier = tax.risk_tier(intent).value
+        if tier == "always_escalate":
+            console.print(f"[red]{intent} is always_escalate -- action forced.[/red]")
+            action: str | None = "escalate"
+        else:
+            action = _choose("ACTION", ["auto", "escalate"])
+            if action is None:
+                console.print("[yellow]Saved. Re-run to continue.[/yellow]")
+                break
+            if action == "__skip__":
+                continue
+
+        reason = ""
+        if action == "escalate":
+            picked = _choose(
+                "REASON",
+                [
+                    "high_risk_intent",
+                    "needs_account_access",
+                    "policy_or_compensation",
+                    "angry_or_repeat_contact",
+                    "ambiguous_request",
+                    "other",
+                ],
+            )
+            if picked is None:
+                break
+            reason = "" if picked == "__skip__" else picked
+
+        ref_good: bool | None = None
+        if ex.reference_reply:
+            console.print(
+                f"\n[dim]brand's actual reply:[/dim] [italic]{ex.reference_reply}[/italic]"
+            )
+            picked = _choose("WAS THAT REPLY ANY GOOD?", ["yes", "no"])
+            if picked is None:
+                break
+            if picked != "__skip__":
+                ref_good = picked == "yes"
+
+        ex.label_intent = intent
+        ex.label_action = action
+        ex.label_reason = reason
+        ex.reference_is_good = ref_good
+        append_label(ex, labels_path)
+        console.print("[green]saved[/green]\n")
+
+    labels = load_labels(labels_path)
+    done, total = label_progress(examples, labels)
+    console.print(f"\nprogress: [bold]{done}/{total}[/bold]")
+    _write_golden_csv(compile_golden_set(examples, labels), labels_path)
+
+
+def _choose(prompt: str, options: list[str]) -> str | None:
+    """Numbered prompt. Returns the choice, '__skip__', or None to quit."""
+    console.print(f"[bold]{prompt}[/bold]")
+    for i, opt in enumerate(options, start=1):
+        console.print(f"  [cyan]{i}[/cyan] {opt}")
+    while True:
+        raw = typer.prompt("  >", default="", show_default=False).strip().lower()
+        if raw == "q":
+            return None
+        if raw == "s":
+            return "__skip__"
+        if raw.isdigit() and 1 <= int(raw) <= len(options):
+            return options[int(raw) - 1]
+        console.print("[red]  enter a number, 's' to skip, or 'q' to quit[/red]")
+
+
+def _write_golden_csv(df: pd.DataFrame, labels_path: Path) -> None:
+    out = labels_path.with_suffix(".csv")
+    df.to_csv(out, index=False)
+    console.print(f"[dim]wrote {out}[/dim]")
+
+
 @app.command("cache-stats")
 def cache_stats(config: Path = typer.Option(None, "--config", "-c")) -> None:
     """Show what is in the response cache, by model."""

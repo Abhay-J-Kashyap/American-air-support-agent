@@ -38,16 +38,32 @@
 
 intents:
   # ---- dominant themes, surfaced by clustering -------------------------
-  - label: positive_no_action
-    description: Praise, thanks, or pre-flight excitement. Needs no resolution.
+  - label: praise_thanks
+    description: Thanks or praise for service already received. Needs no resolution.
     source: cluster
     risk_tier: auto_ok
-    approx_share: 0.301
+    approx_share: 0.200
     note: >
-      Merged from three clusters (praise x2, travel_excitement). Roughly a
-      third of all first-turn messages. Treating these as "successfully
-      handled" is the single largest inflator of any headline accuracy
-      number -- see the report's misleading-number section.
+      Merged from two near-identical positive_feedback clusters (10.2% +
+      9.8%). Kept SEPARATE from travel_excitement: both need no resolution,
+      but they are different messages warranting different replies
+      (acknowledging service received vs. anticipating a trip). Splitting
+      later would mean re-reading every example; merging later is a
+      find-and-replace, so the finer split is the cheap direction.
+      See DECISIONS.md #42.
+
+  - label: travel_excitement
+    description: Anticipation about an upcoming flight or trip. No request made.
+    source: cluster
+    risk_tier: auto_ok
+    approx_share: 0.101
+    note: >
+      Pre-flight enthusiasm ("can't wait for my flight tomorrow!"). Distinct
+      from praise_thanks in tense and in what a good reply looks like.
+      Together these two are ~30% of first-turn messages -- counting them as
+      "successfully handled" is the single largest inflator of any headline
+      accuracy number, and is called out in the report's misleading-number
+      section.
 
   - label: flight_disruption
     description: Delay, cancellation, missed connection, or tarmac wait.
