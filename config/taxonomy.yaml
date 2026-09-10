@@ -1,0 +1,149 @@
+# Curated intent taxonomy -- the SOURCE OF TRUTH for all downstream stages.
+#
+# `discover-intents` writes a PROPOSAL to artifacts/intents/taxonomy.json on
+# every run. This file is the human edit pass over that proposal and is never
+# overwritten by the tool. Downstream stages read this, not the proposal.
+#
+# Provenance of each intent is recorded explicitly (`source`), because the
+# two origins carry different evidence and the report must not blur them:
+#
+#   cluster  -- surfaced by k-means over first-turn message embeddings.
+#   keyword  -- added deliberately by a human. Clustering CANNOT surface
+#               these: at 1.4-5.4% prevalence they are ~240-800 messages in
+#               a 15k sample, while k=10 yields ~1,500-message clusters.
+#               Isolating them needs k~50+, and silhouette (0.031) says
+#               there is no structure to find at any k. See DECISIONS.md #34.
+#
+# risk_tier drives the escalation policy:
+#   always_escalate -- never auto-handled regardless of model confidence.
+#   review          -- auto-draft permitted, human approves before sending.
+#   auto_ok         -- eligible for auto-handling if confidence clears bar.
+#
+# approx_share values DO NOT SUM TO 1 (the full listing totals ~1.27) and
+# must never be presented as a distribution. The two sources are measured
+# differently and are NOT directly comparable:
+#
+#   cluster shares  -- PARTITION the 15,000-message clustering sample
+#                      (k-means assigns each message exactly one cluster).
+#                      These five sum to 99.9%, as they must.
+#   keyword shares  -- OVERLAPPING SUBSETS over all 18,478 first-turn
+#                      training-window messages. A refund request is also
+#                      counted inside service_complaint. Keyword presence
+#                      is also NOT intent: a message saying "still no
+#                      refund" is venting, not requesting. Treat every
+#                      keyword figure as an UPPER BOUND.
+#
+# Recorded as rough magnitude indicators for prioritisation only. The
+# golden set is what establishes the real distribution. See DECISIONS.md #38.
+
+intents:
+  # ---- dominant themes, surfaced by clustering -------------------------
+  - label: positive_no_action
+    description: Praise, thanks, or pre-flight excitement. Needs no resolution.
+    source: cluster
+    risk_tier: auto_ok
+    approx_share: 0.301
+    note: >
+      Merged from three clusters (praise x2, travel_excitement). Roughly a
+      third of all first-turn messages. Treating these as "successfully
+      handled" is the single largest inflator of any headline accuracy
+      number -- see the report's misleading-number section.
+
+  - label: flight_disruption
+    description: Delay, cancellation, missed connection, or tarmac wait.
+    source: cluster
+    risk_tier: review
+    approx_share: 0.351
+    note: >
+      Merged from flight_delays (12.2%), flight_delay (14.3%) and
+      delay_and_service_complaint (8.6%). JUDGEMENT CALL: that third
+      cluster straddles this intent and service_complaint. Assigning it
+      there instead would move 8.6pp between the two. Kept here because
+      the disruption is the trigger and the service failure is the
+      consequence; revisit if golden-set labelling disagrees.
+
+  - label: service_complaint
+    description: Frustration with staff conduct or lack of response, no specific request.
+    source: cluster
+    risk_tier: review
+    approx_share: 0.181
+    note: Merged from negative_customer_service (9.9%) and customer_service_complaint (8.2%).
+
+  - label: fees_and_charges
+    description: Disputes a change fee, baggage fee, or unexpected charge.
+    source: cluster
+    risk_tier: review
+    approx_share: 0.091
+
+  - label: baggage_issue
+    description: Lost, delayed, or damaged bag, or a forced gate check.
+    source: cluster
+    risk_tier: review
+    approx_share: 0.075
+
+  # ---- long tail, added by hand ----------------------------------------
+  # Operationally important, statistically rare. Prevalence below is from
+  # keyword incidence over 35,249 inbound training-window messages and is
+  # an UPPER bound: keyword presence is not intent (a message mentioning
+  # "refund" may be venting, not requesting one).
+  - label: refund_or_compensation
+    description: Requests money back, a voucher, or compensation.
+    source: keyword
+    risk_tier: always_escalate
+    approx_share: 0.031
+    note: >
+      always_escalate: committing to a refund is a financial promise the
+      brand's own replies never make on this channel. Share is the union of
+      refund|voucher|compensat|reimburs|money back.
+
+  - label: booking_change
+    description: Wants to rebook, reschedule, or cancel a booking.
+    source: keyword
+    risk_tier: review
+    approx_share: 0.048
+    note: Union of cancel|rebook|reschedul|change my/our flight.
+
+  - label: seat_or_upgrade
+    description: Seat assignment, seat change, or upgrade request.
+    source: keyword
+    risk_tier: review
+    approx_share: 0.081
+    note: Union of seat|upgrade.
+
+  - label: checkin_boarding
+    description: Check-in failures, boarding pass problems, gate questions.
+    source: keyword
+    risk_tier: review
+    approx_share: 0.083
+    note: >
+      SUSPECT FIGURE, likely inflated. The pattern included \bgate\b, and
+      "gate" appears constantly in delay complaints ("sat at the gate for
+      an hour") which are flight_disruption, not check-in problems. The
+      true share is probably nearer the 1.8% that check.?in alone gives.
+      Do not quote this number in the report without re-deriving it from
+      the golden set.
+
+  - label: loyalty_miles
+    description: AAdvantage miles, elite status, or account questions.
+    source: keyword
+    risk_tier: review
+    approx_share: 0.023
+    note: Union of aadvantage|miles|elite|status match.
+
+  - label: accessibility_medical
+    description: Wheelchair, medical need, or disability accommodation.
+    source: keyword
+    risk_tier: always_escalate
+    approx_share: 0.005
+    note: >
+      The rarest and highest-risk intent: 89 messages in the training
+      window. Any learned classifier will have poor recall here, which is
+      precisely why escalation for this tier is a deterministic rule rather
+      than a confidence threshold. Recall on this class must be reported
+      separately -- it will be invisible in a macro average.
+
+  - label: other
+    description: Does not fit any intent above.
+    source: cluster
+    risk_tier: review
+    approx_share: null

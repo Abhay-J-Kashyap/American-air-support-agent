@@ -186,3 +186,235 @@ and would matter for a brand like Delta that does split replies), but for
 AmericanAir the honest expected value is ~0 merges and that is reported as
 such rather than tuned until the number looks impressive. 140->280 char
 expansion in late 2017, mid-dataset, is the likely reason splitting is rare.
+
+**22. Intents clustered from first-turn messages only, in the training window only.**
+Intent is a property of what the customer first asked. Clustering every
+inbound turn would over-represent long argumentative threads and fill the
+taxonomy with conversational states -- "still waiting", "any update?" --
+rather than intents. Restricted to the training window so the taxonomy is
+not derived from held-out data (#4). The LLM never sees the corpus and never
+chooses k: it only names groups the geometry already found, keeping the
+taxonomy grounded in message distribution rather than in a model's priors
+about what airline complaints should look like.
+
+**23. Silhouette is computed on a 5k subsample; inertia is recorded but cannot select k.**
+Silhouette is O(n^2) and will hang or OOM on 15k+ points, so it is always
+subsampled -- acceptable because it is a heuristic for choosing k, not a
+reported metric. Inertia falls monotonically with k by construction so it
+can never pick k on its own, but it is logged because the shape of the curve
+is what a human reads when overruling the silhouette pick, and the brief
+expects a human edit pass rather than blind automation.
+
+**24. `groupby().first()` silently fabricated rows; replaced with `drop_duplicates`.**
+pandas' `groupby().first()` returns the first NON-NULL value for each column
+INDEPENDENTLY. For a thread whose opening message had a null text, it
+emitted a Frankenstein row: tweet_id and created_at from the real first
+message, text silently borrowed from a later one -- a fabricated training
+example that would look completely normal downstream. Found by adversarial
+probing, not by the passing test suite. Same failure class as #19 and #20:
+green tests over fixtures that lack the pathology.
+
+**25. Embedding sits behind a Protocol so tests never download a model.**
+`Embedder` is a Protocol with a deterministic `StubEmbedder` in the test
+suite, so all 88 tests run with no ONNX download. Same principle as never
+letting CI depend on a live free-tier API (#9): a test suite that needs a
+network fetch is a test suite that fails for reasons unrelated to the code.
+Embeddings are cached to disk keyed by (model, dtype, content hash) so a
+crashed or re-parameterised run does not re-embed 15k messages.
+
+**26. Embedding uses all CPU cores; fastembed's default is single-core.**
+`TextEmbedding.embed()` accepts a per-call `parallel` kwarg (confirmed via
+`inspect.signature()` against the installed package, not docs -- docs have
+drifted from behavior twice already in this project, #13 and #20).
+Default `None` means single-core inference, which pegs one core for
+minutes on a batch of thousands of short tweets while the rest sit idle.
+Now called with `parallel=0` (use every available core), matching
+fastembed's own documented recommendation for large-dataset offline
+encoding, which this always is.
+
+**27. Embedding cache writes are now atomic; np.save silently corrupted the temp-file rename once already.**
+`np.save` is not atomic, so a run killed mid-write can leave a truncated
+`.npy` at the real cache path -- a future run then crashes on `np.load`
+with a confusing numpy error nowhere near its actual cause. Fixed with a
+temp-file-then-rename pattern. First attempt at this fix was itself broken:
+`np.save` silently appends `.npy` to any filename that doesn't already end
+with it, so naming the temp file `*.npy.tmp` made numpy actually write
+`*.npy.tmp.npy`, and the rename then failed with a hard-to-parse
+FileNotFoundError. Caught by directly testing the temp-file behavior
+against a real numpy call rather than trusting the first version once it
+merely looked correct. The cache also now self-heals: a pre-existing
+corrupt file (from before this fix, or any other partial write) is treated
+as a miss and re-embedded rather than crashing the whole run.
+
+**28. Progress reporting is a correctness concern, not a nicety.**
+The first version wrapped model download, model load, and encoding of 15k
+messages under one static "Embedding..." spinner. When a real run appeared
+to stall, that made "is this hung or just slow?" literally unanswerable
+without a debugger -- and because the embedding cache only writes after the
+full batch completes, waiting longer accrued no partial progress either.
+Now: model load and encoding report separately, encoding shows an
+incremental bar with an ETA (fastembed's `.embed()` returns a generator, so
+per-item progress is free), and throughput is printed on completion so the
+next run's cost is predictable rather than guessed.
+
+**29. Embedding parallelism is configurable, defaulting to all cores.**
+`--parallel 0` (all cores) by default, `-1` for single-core, `N` for an
+explicit count. Not hard-coded, because data-parallel encoding spawns
+worker PROCESSES and Windows uses spawn rather than fork: each worker
+re-imports the module and loads its own ~67MB copy of the ONNX model. For
+small batches that startup cost can exceed the compute it saves, so the
+single-core fallback is a real escape hatch. Recommended practice is to
+measure throughput on `--sample 500` before committing to a full run.
+
+**30. JSON parsing rewritten for reasoning models; 21.6% of the corpus was silently unlabelled.**
+The first real run left two clusters (1,325 and 1,926 messages, 21.6% of
+the sample) as `unlabelled_cluster_N`. Cause: the free-tier models are
+reasoning models (gpt-oss, qwen) that emit analysis before their answer
+despite explicit instructions, and the original parser took the FIRST
+`{...}` span via `find("{")`/`rfind("}")` -- which spans from the first
+brace to the last and yields garbage when reasoning text contains braces.
+Rewritten to strip `<think>` and harmony analysis channels first, then
+brace-count (quote-aware, so braces inside string values don't break depth
+tracking) and try candidates LAST-first, since the real answer follows the
+analysis. A failed parse now retries once with a blunter format
+instruction, and if that also fails the RAW RESPONSE is retained on the
+cluster and written to cluster_audit.json -- the original code discarded it,
+making the failure undiagnosable without a full re-run.
+
+**31. Duplicate labels, parse failures, and edge-of-range k are now surfaced as warnings.**
+The first run produced two clusters both labelled `positive_feedback`
+(31.3% of messages combined) and chose k=8, the minimum of the swept 8-14
+range -- both signals that the taxonomy needs work, and both easy to miss
+in a table. The CLI now explicitly warns on duplicate labels, names the
+clusters that failed to parse, and flags when the chosen k sits at the edge
+of the swept range (which means the true optimum may lie outside it).
+Warnings, not errors: the human edit pass decides, the tool just refuses to
+let the problem pass unnoticed.
+
+**32. Reasoning models returned EMPTY content, not malformed content -- the real cause of the unlabelled clusters.**
+On the first two real runs, 21.6% then 51% of the intent corpus came back
+as `unlabelled_cluster_N`. Inspecting the cached raw responses showed the
+model returned `''` -- empty string, HTTP 200, full completion_tokens
+count. gpt-oss is a REASONING model: it spends max_tokens on internal
+reasoning before emitting any answer, and `classifier.max_tokens` was 200,
+so the budget was exhausted mid-reasoning and no content was ever produced.
+A public HF project hit the identical signature with max_tokens=20. Fixed
+three ways: max_tokens raised (1200 classifier / 2000 judge_a),
+`reasoning_effort` set per role (low for classification, none for drafting
+where chain-of-thought buys nothing, medium for judging where it is the
+point), and `reasoning_format: hidden` -- which Groq requires alongside
+JSON mode anyway. The client now also raises a NAMED error on empty
+content rather than passing "" downstream to fail as a mystifying parse
+error far from its cause. Note the first diagnosis was wrong: I assumed
+reasoning-text braces confused the parser and rewrote the parser
+accordingly. That rewrite is retained (#30) because it is independently
+correct, but it was not the bug. Reading the cached raw response was what
+actually identified it -- which is precisely why raw responses are now
+retained on failure.
+
+**33. Silhouette cannot select k for this corpus; k is a human choice and the report must say so.**
+Swept k=4..16: silhouette peaked at 0.042 and fell monotonically. Against
+Rousseeuw's scale (>0.70 strong, 0.50-0.70 reasonable, 0.25-0.50 weak,
+<0.25 no substantial structure) 0.042 means the data has essentially NO
+cluster structure -- short-text embeddings form a semantic continuum, not
+discrete blobs. Because the curve decreases monotonically, argmax
+necessarily returns the smallest k swept, so the "chosen" k=4 was an
+artifact of `--k-min`, not a finding. k-means still returns clusters, but
+their boundaries are imposed rather than discovered. The CLI now detects
+both conditions and says so explicitly, and `--k` allows setting k
+deliberately. This goes in the report's "what is misleading about my
+headline number" section: any per-intent metric inherits the arbitrariness
+of these boundaries, and a taxonomy presented as data-derived is only
+partly so.
+
+**34. The actionable intents are genuinely rare, so clustering alone cannot produce a usable taxonomy.**
+Keyword incidence over 35,249 inbound training-window messages: refund
+1.6%, booking-change 1.4%, check-in 1.8%, seat 5.4%, loyalty 2.9%,
+accessibility 0.4%. These are not hidden by poor embeddings -- they are a
+long tail. k=10 over 15,000 messages yields ~1,500-message clusters, so a
+1.6% intent (~240 messages) is arithmetically impossible to isolate;
+surfacing it would need k~50+, and silhouette (0.031) says there is no
+structure to find at any k. The taxonomy is therefore HYBRID: dominant
+themes from clustering, long-tail intents added by hand, with `source:
+cluster|keyword` recorded per intent so the report never blurs the two
+kinds of evidence. This is the human edit pass the brief asks for, not a
+workaround for a failed method.
+
+**35. What this channel is actually for reframes "good" for this brand.**
+~30% of first-turn messages are praise or pre-flight excitement needing no
+resolution at all, and another ~48% are undirected complaints about delays
+and service. Actual service REQUESTS are the minority. Consequences: (a) a
+system that handles praise perfectly and refunds badly will post an
+excellent headline accuracy while being operationally worthless, so
+accuracy is the wrong headline metric for this brand; (b) `positive_no_action`
+being counted as "successfully handled" is the single largest inflator of
+any aggregate score, and is called out in the misleading-number section;
+(c) per-intent metrics matter far more than any average here.
+
+**36. Escalation for safety-critical intents must be a deterministic rule, not a confidence threshold.**
+`accessibility_medical` (wheelchair, medical need, disability accommodation)
+is the rarest intent at 0.4% -- roughly 140 messages in the entire training
+window. No learned classifier trained on this distribution will have usable
+recall on it, and its errors are the most costly in the taxonomy. This is
+empirical support for what was originally a design preference (#8 era):
+`risk_tier: always_escalate` is enforced by rule regardless of model
+confidence, and recall on this class is reported SEPARATELY because it is
+invisible in a macro average.
+
+**37. The curated taxonomy is a separate committed file from the discovery proposal.**
+`discover-intents` rewrites `artifacts/intents/taxonomy.json` on every run.
+The taxonomy that the classifier, retriever and escalation policy build
+against lives in `config/taxonomy.yaml` and is never written by the tool.
+Without this split, re-running discovery to try a different k would
+silently clobber the hand-curated taxonomy everything downstream depends
+on. A regression test asserts the separation holds.
+
+**38. First keyword prevalence figures were wrong three ways; corrected before they reached the taxonomy.**
+The initial long-tail shares were computed by a throwaway command with
+three defects, all mine: (a) DENOMINATOR -- it filtered on `inbound` and
+`in_training_window` but not first-turn, so it measured 35,249 all-turn
+messages while cluster shares measured 15,000 first-turn ones, making the
+two sets non-comparable side by side; (b) SINGLE KEYWORDS ON MERGED
+INTENTS -- `seat_or_upgrade` got "seat" only, `refund_or_compensation` got
+"refund" only, ignoring voucher/credit, so every merged intent was
+understated; (c) an arithmetic slip put `flight_disruption` at 30% when its
+three constituent clusters sum to 35.1%. Re-derived using union patterns
+against `extract_first_inbound(training_only=True)`, so the denominator now
+matches the clustering exactly. Refund moved 1.6% -> 3.1%, booking_change
+2.9% -> 4.8%, seat_or_upgrade 5.4% -> 8.1%. Cluster shares now sum to
+99.9%, confirming the merges neither double-count nor drop a cluster --
+and that check is now a test.
+
+**39. checkin_boarding's 8.3% is flagged as untrustworthy inside the artifact itself.**
+Its pattern included `\bgate\b`, and "gate" saturates delay complaints
+("sat at the gate for an hour") which are flight_disruption, not check-in
+problems. The true share is probably nearer the 1.8% that `check.?in`
+alone yields. Rather than silently substituting a guess, the figure is
+retained with an explicit SUSPECT warning in `config/taxonomy.yaml` and a
+test asserting that warning survives, so the caveat travels with the
+artifact instead of living only in a conversation. The golden set will
+settle it.
+
+**40. Cluster 6 (`delay_and_service_complaint`, 8.6%) assigned to flight_disruption -- a documented coin-flip.**
+It genuinely straddles flight_disruption and service_complaint; assigning
+it to the latter would move 8.6pp between two of the five largest intents.
+Kept with flight_disruption on the reasoning that the disruption is the
+trigger and the service failure is its consequence. Recorded in the
+taxonomy note as a judgement call to revisit if golden-set labelling
+disagrees, because a merge decision of this size silently changes every
+per-intent metric downstream.
+
+**41. Consolidation audit found the curated taxonomy was orphaned and the CLI contradicted it.**
+A full-state audit after fourteen incremental patches found three
+integration defects that no test caught, because each file was individually
+correct: (a) `taxonomy.py` was imported by nothing but its own tests -- dead
+code; (b) `TAXONOMY_PATH` was a hardcoded relative path, the only
+configuration not in config.yaml, silently breaking if run from another
+directory; (c) `discover-intents` ended by telling the user to hand-edit
+`taxonomy.json` -- the file it overwrites on every run -- directly
+contradicting decision #37 and the separation that decision exists to
+protect. Fixed by routing the path through config, adding a
+`taxonomy-show` command (so the curated file is reachable and validated
+rather than orphaned), and correcting the message. Lesson: unit tests
+verify components, not that components are wired to each other. A
+periodic whole-project audit is a distinct activity from running the suite.

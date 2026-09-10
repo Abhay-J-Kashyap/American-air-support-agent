@@ -1,0 +1,58 @@
+{
+  "intents": [
+    {
+      "label": "negative_customer_service",
+      "description": "Customers express frustration and dissatisfaction with American Airlines' customer service experiences.",
+      "cluster_id": 0
+    },
+    {
+      "label": "change_fee_complaint",
+      "description": "Customers complain about high or unexpected fees for flight changes and upgrades.",
+      "cluster_id": 1
+    },
+    {
+      "label": "baggage_issues",
+      "description": "Customers complain about being forced to check luggage, lost bags, and poor baggage handling.",
+      "cluster_id": 2
+    },
+    {
+      "label": "positive_feedback",
+      "description": "Customers express gratitude and praise for excellent customer service and quick responses.",
+      "cluster_id": 3
+    },
+    {
+      "label": "customer_service_complaint",
+      "description": "Customers express frustration and dissatisfaction with the airline's customer service and overall experience.",
+      "cluster_id": 4
+    },
+    {
+      "label": "flight_delays",
+      "description": "Customers express frustration over delayed flights, long tarmac waits, and boarding problems.",
+      "cluster_id": 5
+    },
+    {
+      "label": "delay_and_service_complaint",
+      "description": "Customers are frustrated with flight delays, missed connections, and inadequate customer service responses.",
+      "cluster_id": 6
+    },
+    {
+      "label": "flight_delay",
+      "description": "Customers are complaining about their flights being delayed and missing connections.",
+      "cluster_id": 7
+    },
+    {
+      "label": "travel_excitement",
+      "description": "Customers express enthusiasm and positive anticipation about upcoming flights and travel experiences.",
+      "cluster_id": 8
+    },
+    {
+      "label": "positive_feedback",
+      "description": "Customers express gratitude and praise for flight crew, service, and overall experience.",
+      "cluster_id": 9
+    },
+    {
+      "label": "other",
+      "description": "Does not fit any discovered intent."
+    }
+  ]
+}

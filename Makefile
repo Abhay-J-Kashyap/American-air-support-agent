@@ -1,4 +1,4 @@
-.PHONY: help setup setup-dev lock lint fmt typecheck test check-providers data intents index golden eval eval-live freeze-cache report clean
+.PHONY: help setup setup-dev lock lint fmt typecheck test check-providers data intents taxonomy index golden eval eval-live freeze-cache report clean
 
 PY := python
 CONFIG ?= config/config.yaml
@@ -36,8 +36,11 @@ check-providers:  ## Ping every model and print the limits the API reports
 data:  ## Stream-filter the raw CSV down to the brand slice, then drop the raw file
 	$(PY) -m aa_agent.cli ingest --config $(CONFIG)
 
-intents:  ## Cluster inbound messages and propose an intent taxonomy
+intents:  ## Cluster first-turn customer messages and propose an intent taxonomy
 	$(PY) -m aa_agent.cli discover-intents --config $(CONFIG)
+
+taxonomy:  ## Validate and display the curated taxonomy (config/taxonomy.yaml)
+	$(PY) -m aa_agent.cli taxonomy-show --config $(CONFIG)
 
 index:  ## Build the retrieval index over the training window only
 	$(PY) -m aa_agent.cli build-index --config $(CONFIG)

@@ -45,6 +45,11 @@ class RoleCfg(BaseModel):
     max_tokens: int = 512
     primary: ModelRef
     fallbacks: list[ModelRef] = Field(default_factory=list)
+    # Provider-specific knobs passed straight through into the request body
+    # (e.g. reasoning_effort / reasoning_format for Groq's gpt-oss models).
+    # Kept as a free-form dict rather than typed fields because every
+    # provider spells these differently and the set changes without notice.
+    extra_params: dict[str, object] = Field(default_factory=dict)
 
     @property
     def chain(self) -> list[ModelRef]:
@@ -72,6 +77,7 @@ class GoldenCfg(BaseModel):
 
 class Config(BaseModel):
     project: ProjectCfg
+    taxonomy_path: Path = Path("config/taxonomy.yaml")
     providers: dict[str, ProviderCfg]
     roles: dict[str, RoleCfg]
     embedding: EmbeddingCfg

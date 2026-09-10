@@ -62,7 +62,15 @@ providers:
 roles:
   classifier:
     temperature: 0.0
-    max_tokens: 200
+    # gpt-oss is a REASONING model: it spends max_tokens on internal
+    # reasoning before emitting any answer. At 200 the budget was exhausted
+    # during reasoning and `content` came back empty with a 200 status --
+    # which silently left 21.6% of the intent corpus unlabelled on the first
+    # real run. See DECISIONS.md #32.
+    max_tokens: 1200
+    extra_params:
+      reasoning_effort: low      # low | medium | high (medium is default)
+      reasoning_format: hidden   # 'parsed' or 'hidden' REQUIRED with JSON mode
     primary: {provider: groq, model: "openai/gpt-oss-20b"}
     fallbacks:
       - {provider: openrouter, model: "openai/gpt-oss-20b:free"}
@@ -73,7 +81,12 @@ roles:
   # this as a limitation in the report if judge_a's scores look odd.
   drafter:
     temperature: 0.3
-    max_tokens: 320
+    # qwen3 supports reasoning_effort 'none' to disable reasoning entirely.
+    # Drafting a two-sentence support reply needs no chain of thought, and
+    # disabling it removes the empty-content failure mode outright.
+    max_tokens: 800
+    extra_params:
+      reasoning_effort: none
     primary: {provider: groq, model: "qwen/qwen3.6-27b"}
     fallbacks:
       - {provider: openrouter, model: "deepseek/deepseek-chat-v3.1:free"}
@@ -85,7 +98,12 @@ roles:
   # for why, and report it as a possible shared-infrastructure confound.
   judge_a:
     temperature: 0.0
-    max_tokens: 600
+    # Same reasoning-budget caveat as the classifier, but judges need room
+    # to actually reason -- that's the point of using a reasoning model here.
+    max_tokens: 2000
+    extra_params:
+      reasoning_effort: medium
+      reasoning_format: hidden
     primary: {provider: groq, model: "openai/gpt-oss-120b"}
     fallbacks:
       - {provider: openrouter, model: "openai/gpt-oss-120b:free"}
@@ -102,6 +120,11 @@ embedding:
   model: BAAI/bge-small-en-v1.5
   dim: 384
   dtype: float16
+
+# The CURATED taxonomy -- source of truth for all downstream stages.
+# Never written by the tool; `discover-intents` only writes a proposal to
+# artifacts/intents/taxonomy.json. See DECISIONS.md #37.
+taxonomy_path: config/taxonomy.yaml
 
 data:
   raw_csv: data/twcs.csv

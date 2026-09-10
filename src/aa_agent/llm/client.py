@@ -142,6 +142,7 @@ class LLMClient:
         }
         if resp_fmt:
             body["response_format"] = resp_fmt
+        body.update(rcfg.extra_params)
 
         headers = {"Authorization": f"Bearer {provider.api_key}"}
         url = provider.base_url.rstrip("/") + "/chat/completions"
@@ -178,6 +179,20 @@ class LLMClient:
             prompt_tokens = int(usage.get("prompt_tokens", est))
             completion_tokens = int(usage.get("completion_tokens", 0))
             limiter.settle(est, prompt_tokens + completion_tokens)
+
+            # Reasoning models (gpt-oss, qwen) spend max_tokens on internal
+            # reasoning FIRST. If the budget runs out before they emit an
+            # answer, `content` comes back as "" with a healthy 200 status
+            # and a full completion_tokens count -- nothing looks wrong.
+            # Downstream that surfaces as a mystifying parse failure a long
+            # way from the cause, so name it here instead.
+            if not text.strip():
+                raise LLMError(
+                    f"{ref} returned empty content after {completion_tokens} completion "
+                    f"tokens (max_tokens={rcfg.max_tokens}). This is the classic "
+                    "reasoning-budget exhaustion signature: raise max_tokens and/or set "
+                    "reasoning_effort='low' in the role's extra_params."
+                )
 
             rec = CacheRecord(
                 key=key,

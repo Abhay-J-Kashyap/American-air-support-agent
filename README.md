@@ -28,15 +28,35 @@ subject to free-tier rate limits — use `make eval-live`.
 ```bash
 cp .env.example .env      # fill in free-tier keys, see below
 make check-providers      # confirm every model is live BEFORE a long run
-make data                 # stream-filter the raw CSV to the brand slice
-make intents              # cluster and propose the intent taxonomy
-make index                # build the retrieval index (training window only)
-make golden               # launch the labelling CLI
-make eval-live            # regenerate predictions and judgements
-make report               # render metrics, tables, figures
+make data                 # stream-filter the raw CSV to the brand slice   [DONE]
+make intents              # cluster and propose an intent taxonomy         [DONE]
+make taxonomy             # validate the curated taxonomy                  [DONE]
+make index                # build the retrieval index (training window)    [TODO]
+make golden               # launch the labelling CLI                       [TODO]
+make eval-live            # regenerate predictions and judgements          [TODO]
+make report               # render metrics, tables, figures                [TODO]
 ```
 
 `make help` lists every target.
+
+### Build status
+
+Implemented: `ingest`, `discover-intents`, `taxonomy-show`, `check-providers`,
+`cache-stats`, `config-show`.
+
+Not yet implemented: `build-index`, `label`, `evaluate`, `report`. The
+Makefile targets for these exist and will fail with "No such command" until
+the corresponding stage is written -- which is also why the `reproduce` job
+in CI is currently red. That is expected, not a regression.
+
+### Two taxonomy files, deliberately
+
+`discover-intents` writes a **proposal** to `artifacts/intents/taxonomy.json`,
+overwriting it on every run. The **curated** taxonomy lives in
+`config/taxonomy.yaml`, is hand-edited, and is what every downstream stage
+reads. Keeping them separate means re-running discovery to try a different
+`k` cannot clobber the taxonomy the classifier and escalation policy are
+built against. `make taxonomy` validates the curated file.
 
 ## Providers
 

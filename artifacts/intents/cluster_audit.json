@@ -1,0 +1,252 @@
+{
+  "k_sweep": [
+    {
+      "k": 8,
+      "silhouette": 0.031131716445088387,
+      "inertia": 3366.11083984375
+    },
+    {
+      "k": 9,
+      "silhouette": 0.02959400601685047,
+      "inertia": 3338.300537109375
+    },
+    {
+      "k": 10,
+      "silhouette": 0.025556880980730057,
+      "inertia": 3314.850341796875
+    },
+    {
+      "k": 11,
+      "silhouette": 0.024513551965355873,
+      "inertia": 3293.297119140625
+    },
+    {
+      "k": 12,
+      "silhouette": 0.023662984371185303,
+      "inertia": 3275.1494140625
+    },
+    {
+      "k": 13,
+      "silhouette": 0.022571466863155365,
+      "inertia": 3258.963134765625
+    },
+    {
+      "k": 14,
+      "silhouette": 0.0220700241625309,
+      "inertia": 3241.912109375
+    }
+  ],
+  "chosen_k": 10,
+  "clusters": [
+    {
+      "cluster_id": 0,
+      "label": "negative_customer_service",
+      "description": "Customers express frustration and dissatisfaction with American Airlines' customer service experiences.",
+      "size": 1478,
+      "representatives": [
+        "@AmericanAir YOU ARE THE ABSOLUTE WORST... accompanied by horrendous customer service #AmericanAirlines you could learn a thing or 2 from @customer \u2708\ufe0f",
+        "@AmericanAir Once again, calling your customer service # is a total waste of time and huge source of frustration.  #worstcustomerservice",
+        "@AmericanAir seriously shitty customer service. You\u2019re entire staff should be embarrassed. Wow",
+        "@AmericanAir wow thanks for completely screwing me over! Also been waiting to speak to a manager for 20 minutes. Never using you ever again",
+        "@AmericanAir really starting a bad mood for the whole day. Can't believe you let them be the firat customer interaction #CustomerServicefail",
+        "@AmericanAir  Seriously? A loyal customer of 20+ years and you\u2019re treating me as rubbish.  I\u2019m disheartened.",
+        "@AmericanAir Your customer service in PHL might have been the worse I have ever seen in my 20+ years of travel!  Disrespectful, and rude!",
+        "@AmericanAir had the worst customer service experience with one of your employees today. I will avoid traveling with you again. #manners",
+        "@AmericanAir is the worst. I\u2019ve never encountered such miserable people. Never straying from @customer again.",
+        "@americanair is a shit show. Terrible customer service. Get it together.",
+        "@AmericanAir I just want y\u2019all to know that y\u2019all really fucked up this time. I\u2019ve received the absolute worssst customer service today!!!",
+        "@AmericanAir is the biggest fucking joke. How are they still in business. @customer do us all a favor and teach them how to treat customers"
+      ],
+      "raw_response": "{\"label\":\"negative_customer_service\",\"description\":\"Customers express frustration and dissatisfaction with American Airlines' customer service experiences.\"}"
+    },
+    {
+      "cluster_id": 1,
+      "label": "change_fee_complaint",
+      "description": "Customers complain about high or unexpected fees for flight changes and upgrades.",
+      "size": 1361,
+      "representatives": [
+        "@AmericanAir I was just trying to take an earlier flight...did you really have to charge me the change fee",
+        "@AmericanAir (4/4) This change fee is ridiculous given that I already have a seat on the return flight. Can I talk w/ someone who can help?",
+        "@AmericanAir Your new boarding pass policy is extremely frustrating. I've missed flights on two occasions because of it.",
+        "@AmericanAir You are missing out on a customer service opportunity- Requested to move up to an earlier flight only to be told it'll cost $75",
+        "@AmericanAir I bought tickets to SJU. You canceled our flight, then rebooked is on another flight. But now I have to pay to change 1/",
+        ".@AmericanAir knows #CustomerService. Flight was changed &amp; one brief call later they had me on a more $ &amp; earlier flight at no extra charge.",
+        "@AmericanAir i used miles for a flight and now need to cancel yet I\u2019m being charged $175. #WTH #poorcustomerservice",
+        "@AmericanAir 1/3 So disappointed! Called weeks ago to request an upgrade with points &amp; $ for my flight tomorrow. I call today to see if it",
+        "@AmericanAir Can't use my $200 airfare and was told there is a $200 change fee. Can you please be more like @customer ? #pleasehelpme",
+        "Not pleased with @AmericanAir  Couldn't checkin online due to an oversold flight and would not give me a seat unless I paid for an upgrade\ud83d\udc4e\ud83c\udffb",
+        "@AmericanAir ur customer people were great. The fact that I couldn't pay$75 to get on an earlier flight cause I didn't have status is wrong\ud83d\ude21",
+        "@AmericanAir is plagued with delays and hidden fees. Thanks for charging me $50 to check my carry on between connecting flights"
+      ],
+      "raw_response": "{\"label\":\"change_fee_complaint\",\"description\":\"Customers complain about high or unexpected fees for flight changes and upgrades.\"}"
+    },
+    {
+      "cluster_id": 2,
+      "label": "baggage_issues",
+      "description": "Customers complain about being forced to check luggage, lost bags, and poor baggage handling.",
+      "size": 1132,
+      "representatives": [
+        "@AmericanAir Super disappointed that you had me check luggage despite tons of space on plane. Thx for prolonging my travel for nothing.",
+        "@AmericanAir airlines thanks for loosing my suitcase,48 hours later and you still have no clue where my bag is Costing me thousands of $$$$",
+        "@AmericanAir baggage policies suck. why can\u2019t you checkin online? I\u2019m stuck at the airport now for 12 hr. #AmericanAirlines",
+        "@AmericanAir we were just forced to check out carry-on luggage.  Plenty of overhead space. Inconvenient, aggravating.",
+        "@AmericanAir I see people getting on with bigger bags, why wasn\u2019t I given that option? Now I\u2019m missing the SECOND flight due to standby",
+        "@AmericanAir I can\u2019t take an earlier flight w/o paying but you\u2019ll send my bags ahead. Had to track them down in another terminal. #nothappy",
+        "@AmericanAir incredibly disappointed. I was forced to gate check a carry on (and there was overhead space open) and my bag was lost #LAX",
+        "@AmericanAir still no bag. What a pain. All of this could have been avoided if you had released our bags when our flight was cancelled.",
+        "@AmericanAir It was necessary to check my carry on bag through because of \"no room in the overhead bins\" #AmericanAirlines #wastingmytime [URL]",
+        "@AmericanAir your baggage service at MIA is worst on earth. Been waiting for my bag for 90 mins even though claims confirmed it is here",
+        "@AmericanAir  thanks for the warning to recheck my bag, almost left it in Miami.  Useless airline",
+        "@AmericanAir not impressed with you leaving my bag at home when the flight wasn't even full.... #annoyed"
+      ],
+      "raw_response": "{\"label\":\"baggage_issues\",\"description\":\"Customers complain about being forced to check luggage, lost bags, and poor baggage handling.\"}"
+    },
+    {
+      "cluster_id": 3,
+      "label": "positive_feedback",
+      "description": "Customers express gratitude and praise for excellent customer service and quick responses.",
+      "size": 1532,
+      "representatives": [
+        "@AmericanAir AWESOMESAUSE!  Thanks for the reply @AmericanAir !",
+        "@AmericanAir thank you for taking care of this. Great customer care. \ud83d\ude42\ud83d\ude42",
+        "@AmericanAir Cheers !! [URL]",
+        "@AmericanAir yet another great service \ud83d\ude0a\ud83d\udc4d [URL]",
+        "@AmericanAir Thanks for your support!!!\nHoaaaah! [URL]",
+        "@AmericanAir That was quick. Thanks! [URL]",
+        "@AmericanAir is rockin' some kick-ass customer service today. Much appreciated!",
+        "@AmericanAir thank you for the support!!! #SomosLive [URL]",
+        "@AmericanAir again great personal service today.  Keep it up AA! [URL]",
+        "@AmericanAir thank you!",
+        "shoutout to @AmericanAir \ud83d\udc99 u",
+        "@AmericanAir Social Team is awesome...as always. Thank you for restoring my faith in excellent customer service. [URL]"
+      ],
+      "raw_response": "{\"label\":\"positive_feedback\",\"description\":\"Customers express gratitude and praise for excellent customer service and quick responses.\"}"
+    },
+    {
+      "cluster_id": 4,
+      "label": "customer_service_complaint",
+      "description": "Customers express frustration and dissatisfaction with the airline's customer service and overall experience.",
+      "size": 1226,
+      "representatives": [
+        "@AmericanAir the worst customer service. I don\u2019t k ow why I still fly with you guys",
+        "@AmericanAir you seriously have the WORST customer service for any airline. I have half a mind to cancel my flights just to avoid y\u2019all.",
+        "@AmericanAir the rudest customer service &amp; policies are archaic. Literally the worst airlines I have flown on. Totally inconvenient service",
+        "@AmericanAir takes the cake for being the worst airline...customer service was horrible and the amount flight cancellations are ridiculous",
+        "@AmericanAir easily the worst flying experience in my life. Never will I use your airline.",
+        "@AmericanAir I'm completely disappointed with this airline!!! I will not ever fly with them again! #PissedOff",
+        "@AmericanAir is the worst airline out there. Consistently disappointing. they just cancelled my reservation as I got to the airport",
+        "@AmericanAir has the worst customer service I've ever experienced. I will never fly #AmericanAirlines ever again.",
+        "@AmericanAir is quite seriously the worst airline I've ever flown. Poor service, 2 hour delay, checking a bag I ALWAYS carry on..never again",
+        "@AmericanAir has THE most incompetent customer service I have ever experienced. This is why I fly @customer",
+        "@AmericanAir your customer service is absolute dog shit. never flying american again. You have not one rep at the customer service desk !",
+        "@americanair I should have listened to all the complaints before booking a flight with this airline. I will never fly with you guys again!!!"
+      ],
+      "raw_response": "{\"label\":\"customer_service_complaint\",\"description\":\"Customers express frustration and dissatisfaction with the airline's customer service and overall experience.\"}"
+    },
+    {
+      "cluster_id": 5,
+      "label": "flight_delays",
+      "description": "Customers express frustration over delayed flights, long tarmac waits, and boarding problems.",
+      "size": 1836,
+      "representatives": [
+        "@AmericanAir come on guys...2 flights in a row, you guys don\u2019t put my bag on the correct flight.  Not cool.",
+        "@AmericanAir you need to get your shit together. This was originally a 6:55 pm flight two terminals away... [URL]",
+        "@AmericanAir Thanks for the 30+ min of sitting on the tarmac at ORD on flight 5444. Keep telling us our gate isn't available #missingmeeting",
+        "@AmericanAir Getting tired of your flights boarding early. Got there &lt;5 min after boarding was supposed. Forced to check bags b/c no space.",
+        "@AmericanAir what\u2019s the deal w flight AA4616? Yall have said \u201cjust a few minutes\u201d 4 an hour+. No AC &amp; expectation management situation is \ud83d\udc4e",
+        "@AmericanAir almost boned us out if a connecting flight cuz of mech failure. Last 5 ppl to board after booking it. You shoulda seen mom \ud83c\udfc3",
+        "@AmericanAir this flight has literally been a mess. Your flight attendants have been great, but we\u2019ve been on the tarmac for over two hours now...\ud83e\udd26\ud83c\udffc\u200d\u2640\ufe0f",
+        "@AmericanAir you\u2019ve done it again ... now i\u2019m late for work... \ud83e\udd26\ud83c\udffe\u200d\u2642\ufe0f... i keep requesting NOT to fly with this airline",
+        "@AmericanAir maybe you can get plane for flight 1057 out \u201cof the hangar\u201d and to the gate? This airport sucks @[REF] - always delays.",
+        "@AmericanAir Effortless boarding (priority is nice).\nLots of leg room.\nthe hell is going on? Where\u2019s the crappy airline I\u2019ve come to loathe?",
+        "@AmericanAir please correct my flight unless y'all also fly time machines #OffTheIsland [URL]",
+        "@AmericanAir if I miss my connecting flight I\u2019m going to be pissed. Wtf is going on? Why are we sitting here. #1788"
+      ],
+      "raw_response": "{\"label\":\"flight_delays\",\"description\":\"Customers express frustration over delayed flights, long tarmac waits, and boarding problems.\"}"
+    },
+    {
+      "cluster_id": 6,
+      "label": "delay_and_service_complaint",
+      "description": "Customers are frustrated with flight delays, missed connections, and inadequate customer service responses.",
+      "size": 1295,
+      "representatives": [
+        "@AmericanAir still waiting to hear back from your customer relations depart on a major screw up...hopefully I can get a response &amp; remedy :/",
+        "Feeling really frustrated with @AmericanAir !! Should have been home hours ago!! #AA5318",
+        "@AmericanAir now i may miss my connection bc if delayed boarding. Hold AA1063!!",
+        "@AmericanAir Thanks for moving my return trip by 5 hours and not confirming it with me at all. Not my idea of good customer service. \ud83d\ude21",
+        "@AmericanAir 25 min late and we miss our connection. No waivers. No vouchers. We did receive some rude customer service.",
+        "@AmericanAir I know things happen, but dang, an almost four hour delay on AA2334 ORD&gt;DFW.  You guys always ruin plans that I have after.",
+        "@AmericanAir I'm a frequent traveler. I am trying to contact Customer Service?. I waited for 45 MINUTES and no one answer. Unbelievable!",
+        "@AmericanAir - service today has been HORRIBLE. 6+ hours later and I'm still waiting for you to get me home. #AmericanAirlines #dobetter",
+        "@AmericanAir but there is no sign of it anywhere and no one can help. Desk says it\u2019s coming. At least @customer does it in 20 minutes!",
+        "@AmericanAir can someone help me  I have a issue here \ud83d\ude47\ud83c\udffe\ud83d\ude47\ud83c\udffe\ud83d\ude46\ud83c\udffe\u200d\u2642\ufe0f",
+        "@AmericanAir please so one help me resolve this issue!",
+        "@AmericanAir HELP!!!!!"
+      ],
+      "raw_response": "{\"label\":\"delay_and_service_complaint\",\"description\":\"Customers are frustrated with flight delays, missed connections, and inadequate customer service responses.\"}"
+    },
+    {
+      "cluster_id": 7,
+      "label": "flight_delay",
+      "description": "Customers are complaining about their flights being delayed and missing connections.",
+      "size": 2148,
+      "representatives": [
+        "@AmericanAir your flight5171 is still delayed! The only change is we are stuck on the plane! Please help so I don\u2019t miss my next flight",
+        "@AmericanAir going to miss my connecting flight because they won't let me off flight 2834 that landed 20+ min ago. Can you help",
+        "@AmericanAir Delayed flight. Thanks for timely updates after the flight time has passed\ud83d\ude21",
+        "@AmericanAir about to miss our connecting flight because we've been sitting in the plane for almost 30 minutes with no explanation. Thanks.",
+        "@AmericanAir has been delaying my flight 15 mins at a time for the last 3.5 hrs bc their plane is broken. I just wanna be home \ud83d\ude29\ud83d\ude29",
+        "@AmericanAir get better maintenance men. Our flight has been delayed 5 times today and has caused lots of trouble..",
+        "@AmericanAir looks like we have a dodgy flight getting repaired with the passengers on it. Already delayed by 2:30 hours. AA46 to LHR",
+        "@AmericanAir delayed first flight, closed door on connecting 15 mins early, now plane just sits while I have to find a new way home. Awesome",
+        "@AmericanAir flight delayed 2 hours. Wow I love flying with y\u2019all but this was not expected. I would be home right now",
+        "@AmericanAir I\u2019m waiting for flight 4346 to board and your system frustratingly says we have taken off and are in time. Still in DCA.",
+        "@AmericanAir of course your flight is delayed over a hour after boarding #nothingnew #pleasefigureit #overit",
+        "@AmericanAir takes off from gate 13 min ahead of departure. Have to get another flight. Now 30 min delayed and counting for maintenance \ud83d\udc4d\ud83c\udffb"
+      ],
+      "raw_response": "{\"label\":\"flight_delay\",\"description\":\"Customers are complaining about their flights being delayed and missing connections.\"}"
+    },
+    {
+      "cluster_id": 8,
+      "label": "travel_excitement",
+      "description": "Customers express enthusiasm and positive anticipation about upcoming flights and travel experiences.",
+      "size": 1515,
+      "representatives": [
+        "@AmericanAir @[REF]  Great day to fly [URL]",
+        "@AmericanAir Thanks! Just saw the upgradeS message for my trip next week, awesome! I am looking forward to a smooth travel  day! #AATeam",
+        "@AmericanAir @customer. Looking forward to my flight tonight.Thanks for the upgrade! #EP#EmeraldOneWorld. Working tomorrow w/ smile.",
+        "On my way to @[REF] Inovate on @AmericanAir this morning. Great day to fly west!",
+        "@AmericanAir at sunset #travel #avgeek [URL]",
+        "@AmericanAir ready to fly...#Boston to #LA #flightAA147 beautiful day to travel \u2708\ufe0f",
+        "Hey, @AmericanAir! We have another long flight together tonight. Ready to cross the pond?  \u2708\ufe0f AA86 [URL]",
+        "Nice day for a trip to LA for a layover... @AmericanAir @[REF] More to follow \ud83d\ude00\u2708\ufe0f [URL]",
+        "Loading up the @AmericanAir 737 at @[REF]. Godspeed to warmer weather. [URL]",
+        "Look I'm flying! @AmericanAir @[REF] [URL]",
+        "@[REF] loves taking advantage of @[REF] #CenturionLounge while waiting for our @AmericanAir flight #petfriendlytravel \ud83d\udc36\ud83d\udc3e\u2708\ufe0f [URL]",
+        "@AmericanAir done with UK job, off to the states with the 787-8.  Looking for another cozy ride.  #closertoplatinum [URL]"
+      ],
+      "raw_response": "{\"label\":\"travel_excitement\",\"description\":\"Customers express enthusiasm and positive anticipation about upcoming flights and travel experiences.\"}"
+    },
+    {
+      "cluster_id": 9,
+      "label": "positive_feedback",
+      "description": "Customers express gratitude and praise for flight crew, service, and overall experience.",
+      "size": 1477,
+      "representatives": [
+        "@AmericanAir thank you for a great flight. The flight crew was awesome!",
+        "@AmericanAir GREATLY appreciate the #flightcrew on 1237 this evening! was the best crew I\u2019ve had on an #AmericanAir flight in a long while!",
+        "Big props to @AmericanAir for reaching out!! Thanks for taking care of me. I'll be flying with your Airlines again!",
+        "Thanks @AmericanAir for a great flight today! Especially grateful when flight crew helped me make a tight connection so I can get home today",
+        "@AmericanAir thanks for the great flight yesterday. Flight 7 dfw to ogg. Cabin and flight crew were great!!!",
+        "@AmericanAir HUGE shout out to the team servicing First on AA90 yesterday. Bloody fantastic! Thanks for a great flight! Lisa in 3H",
+        "@AmericanAir Another great international flight, you are really picking up your game. Much appreciated,",
+        "@AmericanAir thank u for the smooth  flight here! amazing crew on AA087! \u2764\ufe0f",
+        "@AmericanAir is seriously the best ever. Once again an amazing flight \ud83d\udc4c\ud83c\udffe",
+        "@AmericanAir shoutout to you! I recently was reminded on why we chose @customer  thanks for making me miss my flight. #Liberalairlines",
+        "@AmericanAir!!! You guys are awesome! You allow people to \u201cmove their flight up\u201d\u2019and take a seat away from those who are on \u201cstandby\u201d because of your slow customer service! You guys are the best! Keep up the great work!",
+        "Great flight today with @AmericanAir from @[REF] to @[REF] \u2708\ufe0f\ud83c\uddfa\ud83c\uddf8 thanks for taking care of us, gate agents, ramp agents, &amp; in flight"
+      ],
+      "raw_response": "{\"label\":\"positive_feedback\",\"description\":\"Customers express gratitude and praise for flight crew, service, and overall experience.\"}"
+    }
+  ]
+}

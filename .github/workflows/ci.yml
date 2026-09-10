@@ -45,6 +45,12 @@ jobs:
 
   reproduce:
     runs-on: ubuntu-latest
+    # TODO: remove continue-on-error once `aa_agent.cli evaluate` exists.
+    # Pipeline commands (ingest, discover-intents, build-index, label,
+    # evaluate, report) are not written yet -- see README "Full pipeline"
+    # section. Until then this job is expected to fail; it still runs and
+    # reports status, it just doesn't block anything.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
